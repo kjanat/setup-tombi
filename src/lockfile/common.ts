@@ -1,8 +1,9 @@
-export const PYTHON_PACKAGE_ALIASES = ["tombi"] as const;
-export const TYPESCRIPT_PACKAGE_ALIASES = [
-  "tombi",
-  "@tombi-toml/tombi",
-] as const;
+const tombi = "tombi";
+const tombiScoped = "@tombi-toml/tombi";
+
+export const PYTHON_PACKAGE_ALIASES = [tombi] as const;
+export const TOOL_VERSIONS_PACKAGE_ALIASES = [tombi] as const;
+export const TYPESCRIPT_PACKAGE_ALIASES = [tombi, tombiScoped] as const;
 
 export function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

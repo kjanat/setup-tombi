@@ -6,7 +6,12 @@ import { extractVersionFromPnpmLock } from "./pnpm-lock";
 import { extractVersionFromPackageLock } from "./package-lock";
 import { extractVersionFromYarnLock } from "./yarn-lock";
 import { extractVersionFromBunLock } from "./bun-lock";
-import { PYTHON_PACKAGE_ALIASES, TYPESCRIPT_PACKAGE_ALIASES } from "./common";
+import { extractVersionFromToolVersions } from "./tool-versions";
+import {
+  PYTHON_PACKAGE_ALIASES,
+  TOOL_VERSIONS_PACKAGE_ALIASES,
+  TYPESCRIPT_PACKAGE_ALIASES,
+} from "./common";
 
 export const PYTHON_LOCKFILE_KINDS = ["uv.lock", "poetry.lock"] as const;
 export const TYPESCRIPT_LOCKFILE_KINDS = [
@@ -15,9 +20,11 @@ export const TYPESCRIPT_LOCKFILE_KINDS = [
   "yarn.lock",
   "bun.lock",
 ] as const;
+export const VERSION_FILE_KINDS = [".tool-versions"] as const;
 export const SUPPORTED_LOCKFILES = [
   ...PYTHON_LOCKFILE_KINDS,
   ...TYPESCRIPT_LOCKFILE_KINDS,
+  ...VERSION_FILE_KINDS,
 ] as const;
 
 export type LockfileKind = (typeof SUPPORTED_LOCKFILES)[number];
@@ -29,6 +36,7 @@ const LOCKFILE_PACKAGE_ALIASES: Record<LockfileKind, readonly string[]> = {
   "package-lock.json": TYPESCRIPT_PACKAGE_ALIASES,
   "yarn.lock": TYPESCRIPT_PACKAGE_ALIASES,
   "bun.lock": TYPESCRIPT_PACKAGE_ALIASES,
+  ".tool-versions": TOOL_VERSIONS_PACKAGE_ALIASES,
 };
 
 export function detectLockfileKind(lockfilePath: string): LockfileKind {
@@ -72,6 +80,8 @@ export function extractVersionByKind(
       return extractVersionFromYarnLock(content);
     case "bun.lock":
       return extractVersionFromBunLock(content);
+    case ".tool-versions":
+      return extractVersionFromToolVersions(content);
   }
 }
 

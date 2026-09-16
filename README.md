@@ -28,6 +28,16 @@ This is the recommended form from `setup-tombi@v1.1.0` onward. When `with.versio
     lockfile: 'uv.lock'
 ```
 
+### Install a version from `.tool-versions`
+
+Reads the `tombi` entry. If that line lists multiple versions, the first one is used.
+
+```yaml
+- uses: tombi-toml/setup-tombi@v1.5.5
+  with:
+    lockfile: '.tool-versions'
+```
+
 ### Install with checksum verification
 
 The checksum examples below are for GitHub-hosted Linux x64 runners (`x86_64-unknown-linux-musl`).
@@ -107,7 +117,7 @@ Use `enable-cache: true` only when you want to force cache on, for example on se
 | Name | Description | Required | Default |
 |------|-------------|----------|---------|
 | `version` | Version of Tombi to install (e.g., "1.0.0", "latest"). When omitted, installs the Tombi version that matches the `setup-tombi` release version. Mutually exclusive with `lockfile` | No | `setup-tombi` release version |
-| `lockfile` | Path to a lock file used to resolve Tombi version. Supported: `uv.lock`, `poetry.lock`, `pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`, `bun.lock` | No | - |
+| `lockfile` | Path to a lock or version file used to resolve Tombi version. Supported: `uv.lock`, `poetry.lock`, `pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`, `bun.lock`, `.tool-versions` | No | - |
 | `archive-checksum` | SHA256 checksum to validate the downloaded archive before extraction. Accepts `<hex>` or `sha256:<hex>` | No | - |
 | `binary-checksum` | SHA256 checksum to validate the installed executable binary. Accepts `<hex>` or `sha256:<hex>` | No | - |
 | `checksum` | ⚠️ Deprecated. Alias for `binary-checksum` | No | - |
