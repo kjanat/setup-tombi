@@ -56,10 +56,13 @@ export function packageNotFoundError(
   lockfileKind: LockfileKind,
 ): Error {
   const packageAliases = LOCKFILE_PACKAGE_ALIASES[lockfileKind];
+  const fileKind = VERSION_FILE_KINDS.some((kind) => kind === lockfileKind)
+    ? "version file"
+    : "lock file";
   return new Error(
     `Package ${packageAliases
       .map((name) => `\`${name}\``)
-      .join(" or ")} was not found in lock file: ${lockfileInput}`,
+      .join(" or ")} was not found in ${fileKind}: ${lockfileInput}`,
   );
 }
 
