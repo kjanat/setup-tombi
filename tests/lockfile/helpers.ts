@@ -1,9 +1,9 @@
 import { expect } from "vitest";
-import type { LockfileKind } from "../../src/lockfile";
+import type { VersionSourceKind } from "../../src/lockfile";
 import { extractVersionByKind } from "../../src/lockfile";
 
 export function expectResolvedVersion(
-  kind: LockfileKind,
+  kind: VersionSourceKind,
   content: string,
   expectedVersion: string,
 ): void {
@@ -11,7 +11,7 @@ export function expectResolvedVersion(
 }
 
 export function expectVersionNotFound(
-  kind: LockfileKind,
+  kind: VersionSourceKind,
   content: string,
 ): void {
   expect(extractVersionByKind(kind, content)).toBeUndefined();

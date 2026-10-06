@@ -18,7 +18,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -30,8 +30,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
-            echo "workflow_dispatch releases must run from main"
+          if [ "${GITHUB_REF}" != "refs/heads/master" ]; then
+            echo "workflow_dispatch releases must run from master"
             exit 1
           fi
 
@@ -55,7 +55,7 @@ jobs:
           else
             git add package.json README.md
             git commit -m "Update version to ${TAG}"
-            git push origin HEAD:main
+            git push origin HEAD:master
           fi
 
           CURRENT_VERSION="$(python3 -c 'import json, pathlib; print(json.loads(pathlib.Path("package.json").read_text())["version"])')"

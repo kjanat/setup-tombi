@@ -29,6 +29,7 @@ vi.mock("node:fs", async () => {
 vi.mock("node:os");
 vi.mock("./lockfile", () => ({
   resolveVersionFromLockfile: vi.fn(),
+  resolveVersionFromVersionFile: vi.fn(),
 }));
 
 const execFileSyncMock = vi.fn();
@@ -46,6 +47,7 @@ describe("setup-tombi action", () => {
       Record<
         | "version"
         | "lockfile"
+        | "version-file"
         | "binary-checksum"
         | "checksum"
         | "archive-checksum"
@@ -57,6 +59,7 @@ describe("setup-tombi action", () => {
     const inputValues = {
       version: "",
       lockfile: "",
+      "version-file": "",
       "binary-checksum": "",
       checksum: "",
       "archive-checksum": "",
@@ -102,6 +105,9 @@ describe("setup-tombi action", () => {
     const lockfileModule = await import("./lockfile");
     vi.mocked(lockfileModule.resolveVersionFromLockfile).mockResolvedValue(
       "0.7.11",
+    );
+    vi.mocked(lockfileModule.resolveVersionFromVersionFile).mockResolvedValue(
+      "1.5.5",
     );
 
     execFileSyncMock.mockReturnValue("tombi 0.7.11\n");
@@ -181,6 +187,30 @@ describe("setup-tombi action", () => {
         ],
         { stdio: "inherit" },
       );
+    });
+
+    it("installs the version selected by version-file", async () => {
+      const lockfileModule = await import("./lockfile");
+      setInputs({ "version-file": "  config/.tool-versions  " });
+
+      await runAction();
+
+      expect(lockfileModule.resolveVersionFromVersionFile).toHaveBeenCalledWith(
+        "config/.tool-versions",
+      );
+      expect(lockfileModule.resolveVersionFromLockfile).not.toHaveBeenCalled();
+      expect(execFileSyncMock).toHaveBeenCalledWith(
+        "bash",
+        [
+          mockScriptPath,
+          "--version",
+          "1.5.5",
+          "--install-dir",
+          "/home/user/.local/bin",
+        ],
+        { stdio: "inherit" },
+      );
+      expect(core.setFailed).not.toHaveBeenCalled();
     });
 
     it("uses TOMBI_CACHE_HOME when provided", async () => {
@@ -513,16 +543,46 @@ describe("setup-tombi action", () => {
       );
     });
 
-    it("fails when version and lockfile are both provided", async () => {
+    it.each([
+      { version: "latest", lockfile: "pnpm-lock.yaml" },
+      { version: "latest", "version-file": ".tool-versions" },
+      { lockfile: "pnpm-lock.yaml", "version-file": ".tool-versions" },
+      {
+        version: "latest",
+        lockfile: "pnpm-lock.yaml",
+        "version-file": ".tool-versions",
+      },
+    ])("rejects conflicting version sources: %j", async (inputs) => {
       const lockfileModule = await import("./lockfile");
-      setInputs({ version: "latest", lockfile: "pnpm-lock.yaml" });
+      setInputs(inputs);
 
       await runAction();
 
       expect(lockfileModule.resolveVersionFromLockfile).not.toHaveBeenCalled();
+      expect(
+        lockfileModule.resolveVersionFromVersionFile,
+      ).not.toHaveBeenCalled();
+      expect(tc.downloadTool).not.toHaveBeenCalled();
       expect(core.setFailed).toHaveBeenCalledWith(
-        "Inputs `version` and `lockfile` are mutually exclusive.",
+        "Inputs `version`, `lockfile`, and `version-file` are mutually exclusive.",
       );
+    });
+
+    it("reports version-file errors before downloading", async () => {
+      const lockfileModule = await import("./lockfile");
+      vi.mocked(lockfileModule.resolveVersionFromVersionFile).mockRejectedValue(
+        new Error(
+          "Package `tombi` was not found in version file: .tool-versions",
+        ),
+      );
+      setInputs({ "version-file": ".tool-versions" });
+
+      await runAction();
+
+      expect(core.setFailed).toHaveBeenCalledWith(
+        "Package `tombi` was not found in version file: .tool-versions",
+      );
+      expect(tc.downloadTool).not.toHaveBeenCalled();
     });
 
     it("fails when enable-cache has an invalid value", async () => {

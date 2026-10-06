@@ -6,7 +6,10 @@ import * as fs from "node:fs";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { parseCacheMode, restoreTombiCache, shouldEnableCache } from "./cache";
-import { resolveVersionFromLockfile } from "./lockfile";
+import {
+  resolveVersionFromLockfile,
+  resolveVersionFromVersionFile,
+} from "./lockfile";
 
 function isWindows(): boolean {
   return os.platform() === "win32";
@@ -20,8 +23,9 @@ function getBinaryName(): string {
   return isWindows() ? "tombi.exe" : "tombi";
 }
 
-function getDefaultTombiVersion(): string {
-  const packageJsonPath = path.resolve(__dirname, "..", "package.json");
+function getDefaultTombiVersion(actionDir: string): string {
+  // Resolve at runtime so release version updates do not require rebuilding.
+  const packageJsonPath = path.resolve(actionDir, "..", "package.json");
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as {
     version?: unknown;
   };
@@ -55,9 +59,14 @@ function normalizeBinaryChecksumInput(): string | undefined {
 async function resolveRequestedVersion(
   versionInput: string,
   lockfileInput: string,
+  versionFileInput: string,
 ): Promise<string> {
-  if (versionInput && lockfileInput) {
-    throw new Error("Inputs `version` and `lockfile` are mutually exclusive.");
+  if (
+    [versionInput, lockfileInput, versionFileInput].filter(Boolean).length > 1
+  ) {
+    throw new Error(
+      "Inputs `version`, `lockfile`, and `version-file` are mutually exclusive.",
+    );
   }
 
   if (versionInput) {
@@ -72,17 +81,31 @@ async function resolveRequestedVersion(
     return resolvedVersion;
   }
 
-  return getDefaultTombiVersion();
+  if (versionFileInput) {
+    const resolvedVersion =
+      await resolveVersionFromVersionFile(versionFileInput);
+    core.info(
+      `Resolved Tombi version ${resolvedVersion} from ${versionFileInput}`,
+    );
+    return resolvedVersion;
+  }
+
+  return getDefaultTombiVersion(__dirname);
 }
 
 export async function run(): Promise<void> {
   try {
     const versionInput = core.getInput("version").trim();
     const lockfileInput = core.getInput("lockfile").trim();
+    const versionFileInput = core.getInput("version-file").trim();
     const binaryChecksum = normalizeBinaryChecksumInput();
     const archiveChecksum = getOptionalTrimmedInput("archive-checksum");
     const enableCacheInput = core.getInput("enable-cache");
-    const version = await resolveRequestedVersion(versionInput, lockfileInput);
+    const version = await resolveRequestedVersion(
+      versionInput,
+      lockfileInput,
+      versionFileInput,
+    );
     const cacheMode = parseCacheMode(enableCacheInput);
     const enableCache = shouldEnableCache(cacheMode);
 

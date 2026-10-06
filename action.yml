@@ -3,10 +3,13 @@ description: "Set up your GitHub Actions workflow with Tombi"
 author: "tombi-toml"
 inputs:
   version:
-    description: 'Version of Tombi to install (e.g., "1.0.0", "latest"). When omitted, installs the Tombi version that matches this setup-tombi release. Mutually exclusive with lockfile.'
+    description: 'Version of Tombi to install (e.g., "1.0.0", "latest"). When no version source is provided, installs the Tombi version that matches this setup-tombi release. Mutually exclusive with lockfile and version-file.'
     required: false
   lockfile:
-    description: "Path to a lock or version file used to resolve the Tombi version (uv.lock, poetry.lock, pnpm-lock.yaml, package-lock.json, yarn.lock, bun.lock, .tool-versions). Mutually exclusive with version."
+    description: "Path to a lock file used to resolve the Tombi version (uv.lock, poetry.lock, pnpm-lock.yaml, package-lock.json, yarn.lock, bun.lock). Mutually exclusive with version and version-file."
+    required: false
+  version-file:
+    description: "Path to a version file used to resolve the Tombi version (.tool-versions). Mutually exclusive with version and lockfile."
     required: false
   binary-checksum:
     description: "SHA256 checksum to validate the installed executable binary"

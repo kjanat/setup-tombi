@@ -24,12 +24,13 @@ export const VERSION_FILE_KINDS = [".tool-versions"] as const;
 export const SUPPORTED_LOCKFILES = [
   ...PYTHON_LOCKFILE_KINDS,
   ...TYPESCRIPT_LOCKFILE_KINDS,
-  ...VERSION_FILE_KINDS,
 ] as const;
 
 export type LockfileKind = (typeof SUPPORTED_LOCKFILES)[number];
+export type VersionFileKind = (typeof VERSION_FILE_KINDS)[number];
+export type VersionSourceKind = LockfileKind | VersionFileKind;
 
-const LOCKFILE_PACKAGE_ALIASES: Record<LockfileKind, readonly string[]> = {
+const LOCKFILE_PACKAGE_ALIASES: Record<VersionSourceKind, readonly string[]> = {
   "uv.lock": PYTHON_PACKAGE_ALIASES,
   "poetry.lock": PYTHON_PACKAGE_ALIASES,
   "pnpm-lock.yaml": TYPESCRIPT_PACKAGE_ALIASES,
@@ -53,7 +54,7 @@ export function detectLockfileKind(lockfilePath: string): LockfileKind {
 
 export function packageNotFoundError(
   lockfileInput: string,
-  lockfileKind: LockfileKind,
+  lockfileKind: VersionSourceKind,
 ): Error {
   const packageAliases = LOCKFILE_PACKAGE_ALIASES[lockfileKind];
   const fileKind = VERSION_FILE_KINDS.some((kind) => kind === lockfileKind)
@@ -67,7 +68,7 @@ export function packageNotFoundError(
 }
 
 export function extractVersionByKind(
-  lockfileKind: LockfileKind,
+  lockfileKind: VersionSourceKind,
   content: string,
 ): string | undefined {
   switch (lockfileKind) {
@@ -91,9 +92,42 @@ export function extractVersionByKind(
 export async function resolveVersionFromLockfile(
   lockfileInput: string,
 ): Promise<string> {
-  const lockfilePath = path.resolve(lockfileInput);
-  const lockfileKind = detectLockfileKind(lockfilePath);
-  const lockfileBuffer = await fs.promises.readFile(lockfilePath);
+  return resolveVersionFromFile(
+    lockfileInput,
+    detectLockfileKind(lockfileInput),
+  );
+}
+
+export function detectVersionFileKind(
+  versionFilePath: string,
+): VersionFileKind {
+  const fileName = path.basename(versionFilePath);
+  if (VERSION_FILE_KINDS.includes(fileName as VersionFileKind)) {
+    return fileName as VersionFileKind;
+  }
+  throw new Error(
+    `Unsupported version file: ${versionFilePath}. Supported: ${VERSION_FILE_KINDS.join(
+      ", ",
+    )}`,
+  );
+}
+
+export async function resolveVersionFromVersionFile(
+  versionFileInput: string,
+): Promise<string> {
+  return resolveVersionFromFile(
+    versionFileInput,
+    detectVersionFileKind(versionFileInput),
+  );
+}
+
+async function resolveVersionFromFile(
+  lockfileInput: string,
+  lockfileKind: VersionSourceKind,
+): Promise<string> {
+  const lockfileBuffer = await fs.promises.readFile(
+    path.resolve(lockfileInput),
+  );
   const lockfileContent = lockfileBuffer.toString("utf8");
   const resolvedVersion = extractVersionByKind(lockfileKind, lockfileContent);
   if (!resolvedVersion) {
