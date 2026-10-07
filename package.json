@@ -20,8 +20,8 @@
 	"main": "dist/index.mjs",
 	"scripts": {
 		"build": "run -p --runtime node typecheck tsdown",
-		"format": "biome format --write",
-		"format-check": "biome format",
+		"format": "dprint fmt",
+		"format-check": "dprint check",
 		"lint": "biome lint --write",
 		"lint-check": "biome lint",
 		"test": "vitest run",
@@ -34,6 +34,7 @@
 		"@biomejs/biome": "2.5.15",
 		"@types/node": ">=24 <25",
 		"cross-env": "^10.1.0",
+		"dprint": "^0.60.1",
 		"runner-run": "^0.27.1",
 		"tsdown": "^0.23.0",
 		"typescript": "^7.0.2",
