@@ -30,12 +30,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ "${GITHUB_REF}" != "refs/heads/master" ]; then
+          if [[ "${GITHUB_REF}" != "refs/heads/master" ]]; then
             echo "workflow_dispatch releases must run from master"
             exit 1
           fi
 
-          if [ -z "${INPUT_VERSION}" ]; then
+          if [[ -z "${INPUT_VERSION}" ]]; then
             echo "inputs.version is required"
             exit 1
           fi
@@ -59,7 +59,7 @@ jobs:
           fi
 
           CURRENT_VERSION="$(python3 -c 'import json, pathlib; print(json.loads(pathlib.Path("package.json").read_text())["version"])')"
-          if [ "${CURRENT_VERSION}" != "${VERSION}" ]; then
+          if [[ "${CURRENT_VERSION}" != "${VERSION}" ]]; then
             echo "package.json version ${CURRENT_VERSION} does not match requested release version ${VERSION}"
             exit 1
           fi
@@ -80,7 +80,7 @@ jobs:
           if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
             TAG_SHA="$(git rev-list -n 1 "${TAG}")"
 
-            if [ "${TAG_SHA}" != "${RELEASE_SHA}" ]; then
+            if [[ "${TAG_SHA}" != "${RELEASE_SHA}" ]]; then
               echo "Refusing to reuse existing tag ${TAG}: points to ${TAG_SHA}, expected ${RELEASE_SHA}"
               exit 1
             fi

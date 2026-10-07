@@ -1,79 +1,58 @@
 name: CI
 
 on:
-  push:
-    branches: [master]
-  pull_request:
-    branches: [master]
-  workflow_dispatch:
+  push: &b { branches: [master] }
+  pull_request: *b
+  workflow_dispatch: null
+
+defaults: { run: { shell: bash } }
 
 jobs:
   ci:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            name: Linux x64
-          - os: macos-latest
-            name: macOS arm64
-          - os: windows-latest
-            name: Windows x64
+          - { os: ubuntu-latest, name: Linux x64 }
+          - { os: macos-latest, name: macOS arm64 }
+          - { os: windows-latest, name: Windows x64 }
       fail-fast: false
-
     runs-on: ${{ matrix.os }}
     name: Test (${{ matrix.name }})
-
+    env: { somever: "0.9.20" }
     steps:
       - uses: actions/checkout@v7
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: ".node-version"
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          run_install: false
-
-      - name: Install dependencies
-        run: pnpm install
+      - parallel:
+          - uses: pnpm/setup@v3
+            with: { node-version-file: ".node-version" }
+          - uses: kjanat/runner@master
 
       - name: Check formatting
-        if: matrix.os == 'ubuntu-latest'
-        run: pnpm run format-check
+        if: &Ubuntu matrix.os == 'ubuntu-latest'
+        run: run format-check
 
       - name: Check linting
-        if: matrix.os == 'ubuntu-latest'
-        run: pnpm run lint-check
+        if: *Ubuntu
+        run: pm run lint-check
 
       - name: Run unit tests
-        if: matrix.os == 'ubuntu-latest'
-        run: pnpm run test
+        if: *Ubuntu
+        run: run test
 
       - name: Build
-        run: pnpm run build
+        run: run build
 
       - name: Test action with latest version
         uses: ./
-        with:
-          version: latest
+        with: { version: latest }
 
       - name: Verify tombi is installed
         run: tombi --version
-        shell: bash
 
       - name: Test action with specific version
         uses: ./
-        with:
-          version: "0.9.20"
+        with: { version: "${{ env.somever }}" }
 
       - name: Verify specific version is installed
-        run: |
-          VERSION=$(tombi --version)
-          echo "Installed version: $VERSION"
-          if [[ "$VERSION" != *"0.9.20"* ]]; then
-            echo "Expected version 0.9.20 but got $VERSION"
-            exit 1
-          fi
-        shell: bash
+        run: v="$(tombi --version)";
+          printf 'Installed version%%3A %s\n' "${v}";
+          if [[ "${v}" != *"${somever}"* ]]; then { echo "Expected version ${somever} but got ${v}" &>/dev/stderr; exit 1; }; fi
