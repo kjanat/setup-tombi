@@ -14,29 +14,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        manager:
-          - uv
-          - poetry
-          - pnpm
-          - npm
-          - yarn
-          - bun
+        include:
+          - { manager: uv, lockfile: uv-lock }
+          - { manager: poetry, lockfile: poetry-lock }
+          - { manager: pnpm, lockfile: pnpm-lock }
+          - { manager: npm, lockfile: package-lock }
+          - { manager: yarn, lockfile: yarn-lock }
+          - { manager: bun, lockfile: bun-lock }
 
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
+      - name: Setup pnpm and Node.js
+        uses: pnpm/setup@v3
         with:
+          version: "12.9.1"
           node-version-file: ".node-version"
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          run_install: false
-
-      - name: Install dependencies
-        run: pnpm install
 
       - name: Setup Python
         if: matrix.manager == 'uv' || matrix.manager == 'poetry'
@@ -67,4 +60,4 @@ jobs:
       - name: Run generated lockfile parser test
         env:
           LOCKFILE_GENERATION_TEST: "1"
-        run: pnpm run test:lockfile-generated:${{ matrix.manager }}
+        run: pnpm exec vitest run tests/${{ matrix.lockfile }}.generated.test.ts
