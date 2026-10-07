@@ -38066,7 +38066,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 3279:
+/***/ 5660:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -38560,7 +38560,7 @@ const { kEnumerableProperty, isBlobLike } = __nccwpck_require__(5893)
 const { getGlobalDispatcher } = __nccwpck_require__(2686)
 const { types } = __nccwpck_require__(7975)
 const { ErrorEvent, CloseEvent } = __nccwpck_require__(3679)
-const { SendQueue } = __nccwpck_require__(3279)
+const { SendQueue } = __nccwpck_require__(5660)
 
 // https://websockets.spec.whatwg.org/#interface-definition
 class WebSocket extends EventTarget {
@@ -96577,6 +96577,7 @@ const tombiScoped = "@tombi-toml/tombi";
 const PYTHON_PACKAGE_ALIASES = [tombi];
 const TOOL_VERSIONS_PACKAGE_ALIASES = [tombi];
 const TYPESCRIPT_PACKAGE_ALIASES = [tombi, tombiScoped];
+const MISE_TOOL_ALIASES = [tombi, "aqua:tombi-toml/tombi"];
 function escapeRegex(value) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -96890,7 +96891,34 @@ function extractVersionFromToolVersions(content) {
     return undefined;
 }
 
+;// CONCATENATED MODULE: ./lib/lockfile/mise-lock.js
+
+function extractVersionFromMiseLock(content) {
+    const lines = content.split(/\r?\n/);
+    for (let i = 0; i < lines.length; i += 1) {
+        const headerMatch = lines[i].match(/^\s*\[\[tools\.(?:"([^"]+)"|([^\]]+))\]\]\s*$/);
+        if (!headerMatch) {
+            continue;
+        }
+        const toolName = headerMatch[1] ?? headerMatch[2]?.trim();
+        if (!toolName || !isTargetPackage(toolName, MISE_TOOL_ALIASES)) {
+            continue;
+        }
+        for (let j = i + 1; j < lines.length; j += 1) {
+            if (/^\s*\[\[tools\./.test(lines[j])) {
+                break;
+            }
+            const versionMatch = lines[j].match(/^\s*version\s*=\s*["']([^"']+)["']/);
+            if (versionMatch?.[1]) {
+                return cleanResolvedVersion(versionMatch[1]);
+            }
+        }
+    }
+    return undefined;
+}
+
 ;// CONCATENATED MODULE: ./lib/lockfile/index.js
+
 
 
 
@@ -96909,9 +96937,11 @@ const TYPESCRIPT_LOCKFILE_KINDS = [
     "bun.lock",
 ];
 const VERSION_FILE_KINDS = [".tool-versions"];
+const MISE_LOCKFILE_KINDS = ["mise.lock"];
 const SUPPORTED_LOCKFILES = [
     ...PYTHON_LOCKFILE_KINDS,
     ...TYPESCRIPT_LOCKFILE_KINDS,
+    ...MISE_LOCKFILE_KINDS,
 ];
 const LOCKFILE_PACKAGE_ALIASES = {
     "uv.lock": PYTHON_PACKAGE_ALIASES,
@@ -96921,6 +96951,7 @@ const LOCKFILE_PACKAGE_ALIASES = {
     "yarn.lock": TYPESCRIPT_PACKAGE_ALIASES,
     "bun.lock": TYPESCRIPT_PACKAGE_ALIASES,
     ".tool-versions": TOOL_VERSIONS_PACKAGE_ALIASES,
+    "mise.lock": MISE_TOOL_ALIASES,
 };
 function detectLockfileKind(lockfilePath) {
     const lockfileName = external_node_path_namespaceObject.basename(lockfilePath);
@@ -96954,6 +96985,8 @@ function extractVersionByKind(lockfileKind, content) {
             return extractVersionFromBunLock(content);
         case ".tool-versions":
             return extractVersionFromToolVersions(content);
+        case "mise.lock":
+            return extractVersionFromMiseLock(content);
     }
 }
 async function resolveVersionFromLockfile(lockfileInput) {

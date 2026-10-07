@@ -7,7 +7,9 @@ import { extractVersionFromPackageLock } from "./package-lock";
 import { extractVersionFromYarnLock } from "./yarn-lock";
 import { extractVersionFromBunLock } from "./bun-lock";
 import { extractVersionFromToolVersions } from "./tool-versions";
+import { extractVersionFromMiseLock } from "./mise-lock";
 import {
+  MISE_TOOL_ALIASES,
   PYTHON_PACKAGE_ALIASES,
   TOOL_VERSIONS_PACKAGE_ALIASES,
   TYPESCRIPT_PACKAGE_ALIASES,
@@ -21,9 +23,11 @@ export const TYPESCRIPT_LOCKFILE_KINDS = [
   "bun.lock",
 ] as const;
 export const VERSION_FILE_KINDS = [".tool-versions"] as const;
+export const MISE_LOCKFILE_KINDS = ["mise.lock"] as const;
 export const SUPPORTED_LOCKFILES = [
   ...PYTHON_LOCKFILE_KINDS,
   ...TYPESCRIPT_LOCKFILE_KINDS,
+  ...MISE_LOCKFILE_KINDS,
 ] as const;
 
 export type LockfileKind = (typeof SUPPORTED_LOCKFILES)[number];
@@ -38,6 +42,7 @@ const LOCKFILE_PACKAGE_ALIASES: Record<VersionSourceKind, readonly string[]> = {
   "yarn.lock": TYPESCRIPT_PACKAGE_ALIASES,
   "bun.lock": TYPESCRIPT_PACKAGE_ALIASES,
   ".tool-versions": TOOL_VERSIONS_PACKAGE_ALIASES,
+  "mise.lock": MISE_TOOL_ALIASES,
 };
 
 export function detectLockfileKind(lockfilePath: string): LockfileKind {
@@ -86,6 +91,8 @@ export function extractVersionByKind(
       return extractVersionFromBunLock(content);
     case ".tool-versions":
       return extractVersionFromToolVersions(content);
+    case "mise.lock":
+      return extractVersionFromMiseLock(content);
   }
 }
 
