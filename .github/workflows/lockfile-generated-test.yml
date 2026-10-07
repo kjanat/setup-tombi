@@ -28,7 +28,6 @@ jobs:
       - name: Setup pnpm and Node.js
         uses: pnpm/setup@v3
         with:
-          version: "12.9.1"
           node-version-file: ".node-version"
 
       - name: Setup Python
