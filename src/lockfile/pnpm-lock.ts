@@ -1,80 +1,38 @@
-import {
-  TYPESCRIPT_PACKAGE_ALIASES,
-  cleanResolvedVersion,
-  escapeRegex,
-  getIndent,
-} from "./common";
+import { cleanResolvedVersion, escapeRegex, getIndent, TYPESCRIPT_PACKAGE_ALIASES } from '#lockfile/common';
 
-function getPnpmPackageKeyPattern(packageName: string): RegExp {
-  return new RegExp(
-    String.raw`^\s*['"]?\/?${escapeRegex(packageName)}@([^:'"\s)]+)[^:]*:\s*$`,
-    "m",
-  );
-}
+export const extractVersionFromPnpmLock = (content: string) => {
+	for (const packageName of TYPESCRIPT_PACKAGE_ALIASES) {
+		const pattern = new RegExp(String.raw`^\s*['"]?\/?${escapeRegex(packageName)}@([^:'"\s)]+)[^:]*:\s*$`, 'm');
+		const version = content.match(pattern)?.[1];
+		if (version) {
+			const resolved = cleanResolvedVersion(version);
+			if (resolved) return resolved;
+		}
+	}
 
-function getPnpmDependencyLinePattern(packageName: string): RegExp {
-  return new RegExp(
-    String.raw`^\s*['"]?${escapeRegex(packageName)}['"]?\s*:\s*$`,
-  );
-}
+	const lines = content.split(/\r?\n/);
+	for (const packageName of TYPESCRIPT_PACKAGE_ALIASES) {
+		const dependencyLinePattern = new RegExp(String.raw`^\s*['"]?${escapeRegex(packageName)}['"]?\s*:\s*$`);
 
-function matchPnpmPackageKeyVersion(
-  content: string,
-  packageName: string,
-): string | undefined {
-  const packageKeyMatch = content.match(getPnpmPackageKeyPattern(packageName));
-  if (packageKeyMatch?.[1]) {
-    return cleanResolvedVersion(packageKeyMatch[1]);
-  }
-  return undefined;
-}
+		for (let i = 0; i < lines.length; i += 1) {
+			if (!dependencyLinePattern.test(lines[i])) continue;
 
-function matchPnpmDependencyVersionLine(line: string): string | undefined {
-  const versionMatch = line.match(/^\s*version\s*:\s*["']?([^"'\s#]+)["']?/);
-  if (versionMatch?.[1]) {
-    return cleanResolvedVersion(versionMatch[1]);
-  }
-  return undefined;
-}
+			const baseIndent = getIndent(lines[i]);
+			for (let j = i + 1; j < lines.length; j += 1) {
+				const nextLine = lines[j];
+				if (nextLine.trim() === '') continue;
 
-export function extractVersionFromPnpmLock(
-  content: string,
-): string | undefined {
-  for (const packageName of TYPESCRIPT_PACKAGE_ALIASES) {
-    const version = matchPnpmPackageKeyVersion(content, packageName);
-    if (version) {
-      return version;
-    }
-  }
+				const nextIndent = getIndent(nextLine);
+				if (nextIndent <= baseIndent) break;
 
-  const lines = content.split(/\r?\n/);
-  for (const packageName of TYPESCRIPT_PACKAGE_ALIASES) {
-    const dependencyLinePattern = getPnpmDependencyLinePattern(packageName);
+				const version = nextLine.match(/^\s*version\s*:\s*["']?([^"'\s#]+)["']?/)?.[1];
+				if (version) {
+					const resolved = cleanResolvedVersion(version);
+					if (resolved) return resolved;
+				}
+			}
+		}
+	}
 
-    for (let i = 0; i < lines.length; i += 1) {
-      if (!dependencyLinePattern.test(lines[i])) {
-        continue;
-      }
-
-      const baseIndent = getIndent(lines[i]);
-      for (let j = i + 1; j < lines.length; j += 1) {
-        const nextLine = lines[j];
-        if (nextLine.trim() === "") {
-          continue;
-        }
-
-        const nextIndent = getIndent(nextLine);
-        if (nextIndent <= baseIndent) {
-          break;
-        }
-
-        const version = matchPnpmDependencyVersionLine(nextLine);
-        if (version) {
-          return version;
-        }
-      }
-    }
-  }
-
-  return undefined;
-}
+	return undefined;
+};

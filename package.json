@@ -1,45 +1,52 @@
 {
-  "name": "setup-tombi",
-  "version": "1.7.3",
-  "private": true,
-  "description": "GitHub Action to set up Tombi",
-  "main": "dist/index.js",
-  "scripts": {
-    "preinstall": "npx only-allow pnpm",
-    "build": "node -e \"for (const dir of ['dist', 'lib']) require('node:fs').rmSync(dir, { recursive: true, force: true })\" && tsc && ncc build lib/index.js -o dist && ncc build lib/post.js -o dist/post",
-    "format": "biome format --write",
-    "format-check": "biome format",
-    "lint": "biome lint --write",
-    "lint-check": "biome lint",
-    "test": "vitest run",
-    "test:lockfile-generated": "cross-env LOCKFILE_GENERATION_TEST=1 vitest run tests/lockfile/generated/*.test.ts",
-    "test:lockfile-generated:uv": "cross-env LOCKFILE_GENERATION_TEST=1 vitest run tests/lockfile/generated/uv-generated.test.ts",
-    "test:lockfile-generated:poetry": "cross-env LOCKFILE_GENERATION_TEST=1 vitest run tests/lockfile/generated/poetry-generated.test.ts",
-    "test:lockfile-generated:pnpm": "cross-env LOCKFILE_GENERATION_TEST=1 vitest run tests/lockfile/generated/pnpm-generated.test.ts",
-    "test:lockfile-generated:npm": "cross-env LOCKFILE_GENERATION_TEST=1 vitest run tests/lockfile/generated/npm-generated.test.ts",
-    "test:lockfile-generated:yarn": "cross-env LOCKFILE_GENERATION_TEST=1 vitest run tests/lockfile/generated/yarn-generated.test.ts",
-    "test:lockfile-generated:bun": "cross-env LOCKFILE_GENERATION_TEST=1 vitest run tests/lockfile/generated/bun-generated.test.ts",
-    "codex": "npx @openai/codex@latest",
-    "claude": "npx @anthropic-ai/claude-code@latest"
-  },
-  "keywords": ["github", "actions", "tombi", "toml", "setup"],
-  "author": "tombi-toml",
-  "license": "MIT",
-  "packageManager": "pnpm@10.10.0",
-  "pnpm": {
-    "onlyBuiltDependencies": ["@biomejs/biome", "esbuild"]
-  },
-  "dependencies": {
-    "@actions/cache": "^6.2.0",
-    "@actions/core": "^3.0.1",
-    "@actions/tool-cache": "^4.0.0"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.5.14",
-    "@types/node": "^24.13.5",
-    "@vercel/ncc": "^0.45.0",
-    "cross-env": "^10.1.0",
-    "typescript": "^7.0.2",
-    "vitest": "^5.0.1"
-  }
+	"name": "setup-tombi",
+	"version": "1.7.3",
+	"private": true,
+	"description": "GitHub Action to set up Tombi",
+	"keywords": [
+		"github",
+		"actions",
+		"tombi",
+		"toml",
+		"setup"
+	],
+	"license": "MIT",
+	"author": "tombi-toml",
+	"type": "module",
+	"imports": {
+		"#*": "./src/*.ts",
+		"#pkg": "./package.json"
+	},
+	"main": "dist/index.mjs",
+	"scripts": {
+		"build": "run -p --runtime node typecheck tsdown",
+		"format": "biome format --write",
+		"format-check": "biome format",
+		"lint": "biome lint --write",
+		"lint-check": "biome lint",
+		"test": "vitest run",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@actions/cache": "^6.3.0",
+		"@actions/core": "^3.0.1",
+		"@actions/tool-cache": "^4.0.0",
+		"@biomejs/biome": "2.5.15",
+		"@types/node": ">=24 <25",
+		"cross-env": "^10.1.0",
+		"runner-run": "^0.27.1",
+		"tsdown": "^0.23.0",
+		"typescript": "^7.0.2",
+		"vitest": "^5.0.3"
+	},
+	"devEngines": {
+		"packageManager": {
+			"name": "pnpm",
+			"version": ">=12.9.1"
+		},
+		"runtime": {
+			"name": "node",
+			"version": "24"
+		}
+	}
 }

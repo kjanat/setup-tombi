@@ -1,38 +1,27 @@
-import {
-  MISE_TOOL_ALIASES,
-  cleanResolvedVersion,
-  isTargetPackage,
-} from "./common";
+import { cleanResolvedVersion, MISE_TOOL_ALIASES } from '#lockfile/common';
 
-export function extractVersionFromMiseLock(
-  content: string,
-): string | undefined {
-  const lines = content.split(/\r?\n/);
+const lineEndRx = /\r?\n/;
+const headerRx = /^\s*\[\[tools\.(?:"([^"]+)"|([^\]]+))\]\]\s*$/;
+const versionRx = /^\s*version\s*=\s*["']([^"']+)["']/;
+const toolsRx = /^\s*\[\[tools\./;
 
-  for (let i = 0; i < lines.length; i += 1) {
-    const headerMatch = lines[i].match(
-      /^\s*\[\[tools\.(?:"([^"]+)"|([^\]]+))\]\]\s*$/,
-    );
-    if (!headerMatch) {
-      continue;
-    }
+export const extractVersionFromMiseLock = (content: string) => {
+	const lines = content.split(lineEndRx);
 
-    const toolName = headerMatch[1] ?? headerMatch[2]?.trim();
-    if (!toolName || !isTargetPackage(toolName, MISE_TOOL_ALIASES)) {
-      continue;
-    }
+	for (let i = 0; i < lines.length; i += 1) {
+		const headerMatch = lines[i].match(headerRx);
+		if (!headerMatch) continue;
 
-    for (let j = i + 1; j < lines.length; j += 1) {
-      if (/^\s*\[\[tools\./.test(lines[j])) {
-        break;
-      }
+		const toolName = headerMatch[1] ?? headerMatch[2]?.trim();
+		if (!MISE_TOOL_ALIASES.some((alias) => alias === toolName)) continue;
 
-      const versionMatch = lines[j].match(/^\s*version\s*=\s*["']([^"']+)["']/);
-      if (versionMatch?.[1]) {
-        return cleanResolvedVersion(versionMatch[1]);
-      }
-    }
-  }
+		for (let j = i + 1; j < lines.length; j += 1) {
+			if (toolsRx.test(lines[j])) break;
 
-  return undefined;
-}
+			const versionMatch = lines[j].match(versionRx);
+			if (versionMatch?.[1]) return cleanResolvedVersion(versionMatch[1]);
+		}
+	}
+
+	return undefined;
+};

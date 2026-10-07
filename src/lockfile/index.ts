@@ -1,145 +1,50 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { extractVersionFromUvLock } from "./uv-lock";
-import { extractVersionFromPoetryLock } from "./poetry-lock";
-import { extractVersionFromPnpmLock } from "./pnpm-lock";
-import { extractVersionFromPackageLock } from "./package-lock";
-import { extractVersionFromYarnLock } from "./yarn-lock";
-import { extractVersionFromBunLock } from "./bun-lock";
-import { extractVersionFromToolVersions } from "./tool-versions";
-import { extractVersionFromMiseLock } from "./mise-lock";
-import {
-  MISE_TOOL_ALIASES,
-  PYTHON_PACKAGE_ALIASES,
-  TOOL_VERSIONS_PACKAGE_ALIASES,
-  TYPESCRIPT_PACKAGE_ALIASES,
-} from "./common";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { extractVersionFromBunLock } from '#lockfile/bun-lock';
+import { MISE_TOOL_ALIASES, TYPESCRIPT_PACKAGE_ALIASES } from '#lockfile/common';
+import { extractVersionFromMiseLock } from '#lockfile/mise-lock';
+import { extractVersionFromPackageLock } from '#lockfile/package-lock';
+import { extractVersionFromPnpmLock } from '#lockfile/pnpm-lock';
+import { extractVersionFromPythonLock } from '#lockfile/python-lock';
+import { extractVersionFromToolVersions } from '#lockfile/tool-versions';
+import { extractVersionFromYarnLock } from '#lockfile/yarn-lock';
 
-export const PYTHON_LOCKFILE_KINDS = ["uv.lock", "poetry.lock"] as const;
-export const TYPESCRIPT_LOCKFILE_KINDS = [
-  "pnpm-lock.yaml",
-  "package-lock.json",
-  "yarn.lock",
-  "bun.lock",
-] as const;
-export const VERSION_FILE_KINDS = [".tool-versions"] as const;
-export const MISE_LOCKFILE_KINDS = ["mise.lock"] as const;
-export const SUPPORTED_LOCKFILES = [
-  ...PYTHON_LOCKFILE_KINDS,
-  ...TYPESCRIPT_LOCKFILE_KINDS,
-  ...MISE_LOCKFILE_KINDS,
-] as const;
+interface VersionParser {
+	extract: (content: string) => string | undefined;
+	packages: readonly string[];
+}
 
-export type LockfileKind = (typeof SUPPORTED_LOCKFILES)[number];
-export type VersionFileKind = (typeof VERSION_FILE_KINDS)[number];
-export type VersionSourceKind = LockfileKind | VersionFileKind;
-
-const LOCKFILE_PACKAGE_ALIASES: Record<VersionSourceKind, readonly string[]> = {
-  "uv.lock": PYTHON_PACKAGE_ALIASES,
-  "poetry.lock": PYTHON_PACKAGE_ALIASES,
-  "pnpm-lock.yaml": TYPESCRIPT_PACKAGE_ALIASES,
-  "package-lock.json": TYPESCRIPT_PACKAGE_ALIASES,
-  "yarn.lock": TYPESCRIPT_PACKAGE_ALIASES,
-  "bun.lock": TYPESCRIPT_PACKAGE_ALIASES,
-  ".tool-versions": TOOL_VERSIONS_PACKAGE_ALIASES,
-  "mise.lock": MISE_TOOL_ALIASES,
+const LOCKFILES = {
+	'uv.lock': { extract: extractVersionFromPythonLock, packages: ['tombi'] },
+	'poetry.lock': { extract: extractVersionFromPythonLock, packages: ['tombi'] },
+	'pnpm-lock.yaml': { extract: extractVersionFromPnpmLock, packages: TYPESCRIPT_PACKAGE_ALIASES },
+	'package-lock.json': { extract: extractVersionFromPackageLock, packages: TYPESCRIPT_PACKAGE_ALIASES },
+	'yarn.lock': { extract: extractVersionFromYarnLock, packages: TYPESCRIPT_PACKAGE_ALIASES },
+	'bun.lock': { extract: extractVersionFromBunLock, packages: TYPESCRIPT_PACKAGE_ALIASES },
+	'mise.lock': { extract: extractVersionFromMiseLock, packages: MISE_TOOL_ALIASES },
 };
 
-export function detectLockfileKind(lockfilePath: string): LockfileKind {
-  const lockfileName = path.basename(lockfilePath);
-  if (SUPPORTED_LOCKFILES.includes(lockfileName as LockfileKind)) {
-    return lockfileName as LockfileKind;
-  }
-  throw new Error(
-    `Unsupported lock file: ${lockfilePath}. Supported: ${SUPPORTED_LOCKFILES.join(
-      ", ",
-    )}`,
-  );
-}
+const VERSION_FILES = { '.tool-versions': { extract: extractVersionFromToolVersions, packages: ['tombi'] } };
 
-export function packageNotFoundError(
-  lockfileInput: string,
-  lockfileKind: VersionSourceKind,
-): Error {
-  const packageAliases = LOCKFILE_PACKAGE_ALIASES[lockfileKind];
-  const fileKind = VERSION_FILE_KINDS.some((kind) => kind === lockfileKind)
-    ? "version file"
-    : "lock file";
-  return new Error(
-    `Package ${packageAliases
-      .map((name) => `\`${name}\``)
-      .join(" or ")} was not found in ${fileKind}: ${lockfileInput}`,
-  );
-}
+export const resolveVersionFromLockfile = (input: string) => readVersion(input, LOCKFILES, 'lock file');
+export const resolveVersionFromVersionFile = (input: string) => readVersion(input, VERSION_FILES, 'version file');
 
-export function extractVersionByKind(
-  lockfileKind: VersionSourceKind,
-  content: string,
-): string | undefined {
-  switch (lockfileKind) {
-    case "uv.lock":
-      return extractVersionFromUvLock(content);
-    case "poetry.lock":
-      return extractVersionFromPoetryLock(content);
-    case "pnpm-lock.yaml":
-      return extractVersionFromPnpmLock(content);
-    case "package-lock.json":
-      return extractVersionFromPackageLock(content);
-    case "yarn.lock":
-      return extractVersionFromYarnLock(content);
-    case "bun.lock":
-      return extractVersionFromBunLock(content);
-    case ".tool-versions":
-      return extractVersionFromToolVersions(content);
-    case "mise.lock":
-      return extractVersionFromMiseLock(content);
-  }
-}
+const readVersion = async (
+	input: string,
+	parsers: Record<string, VersionParser>,
+	fileKind: string,
+) => {
+	const name = path.basename(input);
+	if (!Object.hasOwn(parsers, name)) {
+		throw new Error(`Unsupported ${fileKind}: ${input}. Supported: ${Object.keys(parsers).join(', ')}`);
+	}
 
-export async function resolveVersionFromLockfile(
-  lockfileInput: string,
-): Promise<string> {
-  return resolveVersionFromFile(
-    lockfileInput,
-    detectLockfileKind(lockfileInput),
-  );
-}
-
-export function detectVersionFileKind(
-  versionFilePath: string,
-): VersionFileKind {
-  const fileName = path.basename(versionFilePath);
-  if (VERSION_FILE_KINDS.includes(fileName as VersionFileKind)) {
-    return fileName as VersionFileKind;
-  }
-  throw new Error(
-    `Unsupported version file: ${versionFilePath}. Supported: ${VERSION_FILE_KINDS.join(
-      ", ",
-    )}`,
-  );
-}
-
-export async function resolveVersionFromVersionFile(
-  versionFileInput: string,
-): Promise<string> {
-  return resolveVersionFromFile(
-    versionFileInput,
-    detectVersionFileKind(versionFileInput),
-  );
-}
-
-async function resolveVersionFromFile(
-  lockfileInput: string,
-  lockfileKind: VersionSourceKind,
-): Promise<string> {
-  const lockfileBuffer = await fs.promises.readFile(
-    path.resolve(lockfileInput),
-  );
-  const lockfileContent = lockfileBuffer.toString("utf8");
-  const resolvedVersion = extractVersionByKind(lockfileKind, lockfileContent);
-  if (!resolvedVersion) {
-    throw packageNotFoundError(lockfileInput, lockfileKind);
-  }
-
-  return resolvedVersion;
-}
+	const parser = parsers[name];
+	const content = await fs.promises.readFile(path.resolve(input), 'utf8');
+	const version = parser.extract(content);
+	if (!version) {
+		const packages = parser.packages.map((name) => `\`${name}\``).join(' or ');
+		throw new Error(`Package ${packages} was not found in ${fileKind}: ${input}`);
+	}
+	return version;
+};

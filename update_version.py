@@ -103,9 +103,7 @@ def fetch_release_checksums_for_target(
     binary_name: str,
 ) -> ReleaseChecksums:
     archive_name = f"tombi-cli-{version}-{target}.{archive_format}"
-    archive_url = (
-        f"https://github.com/tombi-toml/tombi/releases/download/v{version}/{archive_name}"
-    )
+    archive_url = f"https://github.com/tombi-toml/tombi/releases/download/v{version}/{archive_name}"
 
     print(f"Downloading {archive_url}")
     with urllib.request.urlopen(archive_url, timeout=60) as response:

@@ -31,8 +31,8 @@ outputs:
 
 runs:
   using: "node24"
-  main: "dist/index.js"
-  post: "dist/post/index.js"
+  main: "dist/index.mjs"
+  post: "dist/post.mjs"
   post-if: success()
 
 branding:

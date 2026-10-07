@@ -1,30 +1,10 @@
-import {
-  TYPESCRIPT_PACKAGE_ALIASES,
-  cleanResolvedVersion,
-  escapeRegex,
-} from "./common";
+import { cleanResolvedVersion, escapeRegex, TYPESCRIPT_PACKAGE_ALIASES } from '#lockfile/common';
 
-function getBunPackagePattern(packageName: string): RegExp {
-  return new RegExp(`${escapeRegex(packageName)}@([0-9][0-9A-Za-z.+-]*)`);
-}
-
-function matchBunPackageVersion(
-  content: string,
-  packageName: string,
-): string | undefined {
-  const packageMatch = content.match(getBunPackagePattern(packageName));
-  if (packageMatch?.[1]) {
-    return cleanResolvedVersion(packageMatch[1]);
-  }
-  return undefined;
-}
-
-export function extractVersionFromBunLock(content: string): string | undefined {
-  for (const packageName of TYPESCRIPT_PACKAGE_ALIASES) {
-    const version = matchBunPackageVersion(content, packageName);
-    if (version) {
-      return version;
-    }
-  }
-  return undefined;
-}
+export const extractVersionFromBunLock = (content: string) => {
+	for (const packageName of TYPESCRIPT_PACKAGE_ALIASES) {
+		const pattern = new RegExp(`${escapeRegex(packageName)}@([0-9][0-9A-Za-z.+-]*)`);
+		const version = content.match(pattern)?.[1];
+		if (version) return cleanResolvedVersion(version);
+	}
+	return undefined;
+};
