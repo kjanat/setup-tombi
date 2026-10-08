@@ -6,7 +6,7 @@ on:
   workflow_dispatch: null
 
 defaults: { run: { shell: bash } }
-
+permissions: {}
 jobs:
   ci:
     strategy:

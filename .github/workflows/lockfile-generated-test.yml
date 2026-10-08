@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [master]
   workflow_dispatch:
-
+permissions: {}
 jobs:
   lockfile-generated-test:
     name: Lockfile Test (${{ matrix.manager }})
