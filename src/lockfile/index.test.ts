@@ -62,17 +62,20 @@ describe('version source files', () => {
 		);
 	});
 
-	it('reads the first version from .tool-versions', async () => {
-		const file = path.join(projectDir, '.tool-versions');
-		fs.writeFileSync(file, 'nodejs 24\ntombi 1.5.5 1.4.0 # fallback\n');
-		await expect(resolveVersionFromVersionFile(file)).resolves.toBe('1.5.5');
-	});
+	it.each(['tombi', 'github:tombi-toml/tombi', 'aqua:tombi-toml/tombi'])(
+		'reads the first version of %s from .tool-versions',
+		async (name) => {
+			const file = path.join(projectDir, '.tool-versions');
+			fs.writeFileSync(file, `nodejs 24\n${name} 1.5.5 1.4.0 # fallback\n`);
+			await expect(resolveVersionFromVersionFile(file)).resolves.toBe('1.5.5');
+		},
+	);
 
 	it('reports a missing Tombi entry as a version file error', async () => {
 		const file = path.join(projectDir, '.tool-versions');
 		fs.writeFileSync(file, 'nodejs 24\n');
 		await expect(resolveVersionFromVersionFile(file)).rejects.toThrow(
-			`Package \`tombi\` was not found in version file: ${file}`,
+			`Package \`tombi\` or \`aqua:tombi-toml/tombi\` or \`github:tombi-toml/tombi\` was not found in version file: ${file}`,
 		);
 	});
 

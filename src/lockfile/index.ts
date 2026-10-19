@@ -24,7 +24,7 @@ const LOCKFILES = {
 	'mise.lock': { extract: extractVersionFromMiseLock, packages: MISE_TOOL_ALIASES },
 };
 
-const VERSION_FILES = { '.tool-versions': { extract: extractVersionFromToolVersions, packages: ['tombi'] } };
+const VERSION_FILES = { '.tool-versions': { extract: extractVersionFromToolVersions, packages: MISE_TOOL_ALIASES } };
 
 export const resolveVersionFromLockfile = (input: string) => readVersion(input, LOCKFILES, 'lock file');
 export const resolveVersionFromVersionFile = (input: string) => readVersion(input, VERSION_FILES, 'version file');

@@ -14,6 +14,14 @@ tombi         1.5.5
 		expect(extractVersionFromToolVersions('tombi 1.5.5\n')).toBe('1.5.5');
 	});
 
+	it.each(['github:tombi-toml/tombi', 'aqua:tombi-toml/tombi'])(
+		'resolves the backend-qualified tool %s',
+		(name) => {
+			expect(extractVersionFromToolVersions(`${name}  1.8\n`)).toBe('1.8');
+			expect(extractVersionFromToolVersions(`\t${name}\t1.8.7 1.7.3 # fallback\r\n`)).toBe('1.8.7');
+		},
+	);
+
 	it('ignores comments, blank lines, and Windows line endings', () => {
 		expect(extractVersionFromToolVersions('# tools\r\n\r\ntombi 1.5.5 # TOML formatter\r\n')).toBe('1.5.5');
 	});
@@ -28,6 +36,18 @@ tombi         1.5.5
 
 	it('does not match similar tool names', () => {
 		expect(extractVersionFromToolVersions('tombi-extra 1.5.5\nmytombi 1.5.5\n')).toBeUndefined();
+	});
+
+	it.each(['github:other/tombi', 'github:tombi-toml/tombi-extra'])(
+		'does not match the unrelated backend-qualified tool %s',
+		(name) => {
+			expect(extractVersionFromToolVersions(`${name} 1.8.7\n`)).toBeUndefined();
+		},
+	);
+
+	it('selects the first matching entry across tool aliases', () => {
+		expect(extractVersionFromToolVersions('github:tombi-toml/tombi 1.8.7\ntombi 1.7.3\n')).toBe('1.8.7');
+		expect(extractVersionFromToolVersions('tombi 1.7.3\ngithub:tombi-toml/tombi 1.8.7\n')).toBe('1.7.3');
 	});
 
 	it('returns undefined when Tombi is absent', () => {

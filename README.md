@@ -30,7 +30,13 @@ When no `version`, `lockfile`, or `version-file` is provided, the action install
 
 ### Install a version from `.tool-versions`
 
-Reads the `tombi` entry. If that line lists multiple versions, the first one is used.
+Reads the first `tombi`, `github:tombi-toml/tombi`, or `aqua:tombi-toml/tombi` entry. If that line lists multiple versions, the first one is used.
+
+For example, a `.tool-versions` file using mise's GitHub backend can contain:
+
+```text
+github:tombi-toml/tombi  1.8.7
+```
 
 ```yaml
 - uses: kjanat/setup-tombi@master

@@ -58213,7 +58213,7 @@ const extractVersionFromPythonLock = (content) => {
 const extractVersionFromToolVersions = (content) => {
 	for (const line of content.split(/\r?\n/)) {
 		const [name, version] = line.split("#", 1)[0].trim().split(/\s+/);
-		if (name === "tombi" && version) {
+		if (MISE_TOOL_ALIASES.some((alias) => alias === name) && version) {
 			const resolved = cleanResolvedVersion(version);
 			if (resolved) return resolved;
 		}
@@ -58278,7 +58278,7 @@ const LOCKFILES = {
 };
 const VERSION_FILES = { ".tool-versions": {
 	extract: extractVersionFromToolVersions,
-	packages: ["tombi"]
+	packages: MISE_TOOL_ALIASES
 } };
 const resolveVersionFromLockfile = (input) => readVersion(input, LOCKFILES, "lock file");
 const resolveVersionFromVersionFile = (input) => readVersion(input, VERSION_FILES, "version file");
