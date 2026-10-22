@@ -7,6 +7,7 @@ import * as core from '@actions/core';
 import * as tc from '@actions/tool-cache';
 import { restoreTombiCache, shouldEnableCache } from '#cache';
 import { resolveVersionFromLockfile, resolveVersionFromVersionFile } from '#lockfile/index';
+import { resolveInstallVersion } from '#version';
 
 const getDefaultTombiVersion = (actionDir: string) => {
 	// Resolve at runtime so release version updates do not require rebuilding.
@@ -42,6 +43,9 @@ export async function run() {
 		} else if (!version) {
 			version = getDefaultTombiVersion(import.meta.dirname);
 		}
+		const requestedVersion = version;
+		version = await resolveInstallVersion(version, core.getInput('github-token').trim());
+		if (version !== requestedVersion) core.info(`Resolved Tombi ${requestedVersion} to published release ${version}`);
 
 		const enableCache = shouldEnableCache(core.getInput('enable-cache'));
 

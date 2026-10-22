@@ -84,6 +84,7 @@ describe('setup-tombi action', () => {
 		vi.resetModules();
 		vi.resetAllMocks();
 		vi.unstubAllEnvs();
+		vi.unstubAllGlobals();
 		vi.stubEnv('RUNNER_ENVIRONMENT', 'github-hosted');
 		vi.stubEnv('XDG_CACHE_HOME', '');
 		vi.stubEnv('LOCALAPPDATA', '');
@@ -118,9 +119,53 @@ describe('setup-tombi action', () => {
 	afterEach(() => {
 		vi.resetAllMocks();
 		vi.unstubAllEnvs();
+		vi.unstubAllGlobals();
 	});
 
 	describe('Linux', () => {
+		it.each(['version', 'version-file', 'lockfile'] as const)(
+			'resolves partial %s before cache and installation',
+			async (source) => {
+				const lockfileModule = await import('./lockfile');
+				vi.mocked(lockfileModule.resolveVersionFromLockfile).mockResolvedValue('1.9');
+				vi.mocked(lockfileModule.resolveVersionFromVersionFile).mockResolvedValue('1.9');
+				vi.mocked(tc.evaluateVersions).mockReturnValue('1.9.0');
+				vi.stubGlobal(
+					'fetch',
+					vi.fn().mockResolvedValue(
+						new Response(JSON.stringify([
+							{ tag_name: 'v1.9.0', draft: false, prerelease: false },
+						])),
+					),
+				);
+				setInputs({ [source]: source === 'version' ? '1.9' : source === 'lockfile' ? 'mise.lock' : '.tool-versions' });
+				await runAction();
+				expect(execFileSyncMock).toHaveBeenCalledWith('bash', [
+					mockScriptPath,
+					'--version',
+					'1.9.0',
+					'--install-dir',
+					'/home/user/.local/bin',
+				], { stdio: 'inherit' });
+				expect(cache.restoreCache).toHaveBeenCalledWith(
+					['/home/user/.cache/tombi'],
+					'setup-tombi-v1-linux-x64-1.9.0--home-user-.cache-tombi',
+					['setup-tombi-v1-linux-x64-'],
+				);
+				expect(core.setFailed).not.toHaveBeenCalled();
+			},
+		);
+
+		it('stops before caching or installation when partial resolution fails', async () => {
+			setInputs({ version: '1.9' });
+			vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 403 })));
+			await runAction();
+			expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('HTTP 403'));
+			expect(cache.restoreCache).not.toHaveBeenCalled();
+			expect(tc.downloadTool).not.toHaveBeenCalled();
+			expect(execFileSyncMock).not.toHaveBeenCalled();
+		});
+
 		it('uses install.sh script with install-dir', async () => {
 			await runAction();
 

@@ -48,6 +48,22 @@ jobs:
       - name: Verify tombi is installed
         run: tombi --version
 
+      - name: Test action with minor version from .tool-versions
+        run: printf '%s\n' 'tombi 1.9' > "$RUNNER_TEMP/.tool-versions"
+
+      - name: Resolve and install the requested release series
+        uses: ./
+        with: { version-file: "${{ runner.temp }}/.tool-versions" }
+
+      - name: Verify the resolved series is installed
+        run: |
+          installed_version="$(tombi --version)"
+          printf 'Installed version: %s\n' "${installed_version}"
+          if [[ ! "${installed_version}" =~ ^tombi[[:space:]]1[.]9[.][0-9]+([[:space:]]|$) ]]; then
+            echo "Expected stable 1.9.x but got ${installed_version}" >&2
+            exit 1
+          fi
+
       - name: Test action with specific version
         uses: ./
         with: { version: "${{ env.somever }}" }

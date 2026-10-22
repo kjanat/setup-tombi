@@ -21,6 +21,17 @@ When no `version`, `lockfile`, or `version-file` is provided, the action install
   with: { version: "1.0.0" }
 ```
 
+### Install the latest stable patch in a release series
+
+```yaml
+- uses: kjanat/setup-tombi@master
+  with: { version: "1.9" }
+```
+
+Major (`1`) and minor (`1.9`) pins resolve to the highest matching published stable Tombi release before installation and cache selection. A leading `v` is accepted on these partial pins. Draft and prerelease releases are excluded, and numeric version ordering is used instead of publication order. The same resolution applies to partial versions read from lock files or `.tool-versions`; for example, `tombi 1.9` resolves to `1.9.0` when that is the highest published stable match.
+
+Resolution uses GitHub's releases API, with the `github-token` input defaulting to `${{ github.token }}`. API failures and unmatched versions fail clearly without attempting to install the partial string. Exact versions and the `latest` installer alias retain their existing behavior and do not use this additional API lookup. For reproducibility, use a full version and checksums.
+
 ### Install a version from a lock file
 
 ```yaml
@@ -117,7 +128,8 @@ Use `enable-cache: true` only when you want to force cache on, for example on se
 
 | Name               | Description                                                                                                                                                                                                               | Required | Default                                |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------------------- |
-| `version`          | Version of Tombi to install (e.g., "1.0.0", "latest"). When no version source is provided, installs the Tombi version recorded in the action's `package.json`. Mutually exclusive with `lockfile` and `version-file`      | No       | Version in the action's `package.json` |
+| `version`          | Exact version, major/minor series (e.g., "1", "1.9"), or "latest". Partial versions select the highest published stable match. Mutually exclusive with `lockfile` and `version-file`.                                     | No       | Version in the action's `package.json` |
+| `github-token`     | GitHub token for major/minor version resolution.                                                                                                                                                                          | No       | `${{ github.token }}`                  |
 | `lockfile`         | Path to a lock file used to resolve Tombi version. Supported: `uv.lock`, `poetry.lock`, `pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`, `bun.lock`, `mise.lock`. Mutually exclusive with `version` and `version-file` | No       | -                                      |
 | `version-file`     | Path to a version file used to resolve Tombi version. Supported: `.tool-versions`. Mutually exclusive with `version` and `lockfile`                                                                                       | No       | -                                      |
 | `archive-checksum` | SHA256 checksum to validate the downloaded archive before extraction. Accepts `<hex>` or `sha256:<hex>`                                                                                                                   | No       | -                                      |

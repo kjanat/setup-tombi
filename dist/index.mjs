@@ -19215,6 +19215,30 @@ function downloadToolAttempt(url, dest, auth, headers) {
 	});
 }
 /**
+* Get the highest satisfiying semantic version in `versions` which satisfies `versionSpec`
+*
+* @param versions        array of versions to evaluate
+* @param versionSpec     semantic version spec to satisfy
+*/
+function evaluateVersions(versions, versionSpec) {
+	let version = "";
+	debug(`evaluating ${versions.length} versions`);
+	versions = versions.sort((a, b) => {
+		if (import_semver.gt(a, b)) return 1;
+		return -1;
+	});
+	for (let i = versions.length - 1; i >= 0; i--) {
+		const potential = versions[i];
+		if (import_semver.satisfies(potential, versionSpec)) {
+			version = potential;
+			break;
+		}
+	}
+	if (version) debug(`matched: ${version}`);
+	else debug("match not found");
+	return version;
+}
+/**
 * Gets RUNNER_TEMP
 */
 function _getTempDirectory() {
@@ -58295,6 +58319,39 @@ const readVersion = async (input, parsers, fileKind) => {
 	return version;
 };
 //#endregion
+//#region src/version.ts
+const releasesUrl = "https://api.github.com/repos/tombi-toml/tombi/releases";
+const maxReleasePages = 20;
+async function resolveInstallVersion(requested, token = "") {
+	if (!/^v?(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?$/.test(requested)) return requested;
+	const versions = [];
+	for (let page = 1; page <= maxReleasePages; page++) {
+		const response = await fetch(`${releasesUrl}?per_page=100&page=${page}`, {
+			headers: {
+				Accept: "application/vnd.github+json",
+				"User-Agent": "setup-tombi",
+				...token ? { Authorization: `Bearer ${token}` } : {}
+			},
+			signal: AbortSignal.timeout(1e4)
+		});
+		if (!response.ok) throw new Error(`Unable to resolve Tombi ${requested}: GitHub releases returned HTTP ${response.status}.`);
+		const releases = await response.json();
+		if (!Array.isArray(releases)) throw new Error("Invalid Tombi release list: expected an array.");
+		for (const release of releases) {
+			if (release === null || typeof release !== "object") continue;
+			const { tag_name: tag, draft, prerelease } = release;
+			if (draft !== false || prerelease !== false || typeof tag !== "string") continue;
+			if (/^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(tag)) versions.push(tag.replace(/^v/, ""));
+		}
+		if (!response.headers.get("link")?.includes("rel=\"next\"")) {
+			const resolved = evaluateVersions(versions, requested.replace(/^v/, ""));
+			if (!resolved) throw new Error(`No published stable Tombi release matches ${requested}.`);
+			return resolved;
+		}
+	}
+	throw new Error(`Unable to resolve Tombi ${requested}: release pagination exceeded ${maxReleasePages} pages.`);
+}
+//#endregion
 //#region src/index.ts
 const getDefaultTombiVersion = (actionDir) => {
 	const packageJsonPath = path.resolve(actionDir, "..", "package.json");
@@ -58319,6 +58376,9 @@ async function run() {
 			version = lockfileInput ? await resolveVersionFromLockfile(lockfileInput) : await resolveVersionFromVersionFile(versionFileInput);
 			info(`Resolved Tombi version ${version} from ${lockfileInput || versionFileInput}`);
 		} else if (!version) version = getDefaultTombiVersion(import.meta.dirname);
+		const requestedVersion = version;
+		version = await resolveInstallVersion(version, getInput("github-token").trim());
+		if (version !== requestedVersion) info(`Resolved Tombi ${requestedVersion} to published release ${version}`);
 		if (shouldEnableCache(getInput("enable-cache"))) await restoreTombiCache(version);
 		else info("Tombi cache is disabled.");
 		const installDir = path.join(os$2.homedir(), ".local", "bin");

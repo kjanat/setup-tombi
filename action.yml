@@ -3,8 +3,12 @@ description: "Set up your GitHub Actions workflow with Tombi"
 author: "tombi-toml"
 inputs:
   version:
-    description: 'Version of Tombi to install (e.g., "1.0.0", "latest"). When no version source is provided, installs the Tombi version that matches this setup-tombi release. Mutually exclusive with lockfile and version-file.'
+    description: 'Version of Tombi to install (e.g., "1.0.0", "1.9", "1", "latest"). Major/minor pins resolve to the highest matching published stable release. When no version source is provided, installs the Tombi version that matches this setup-tombi release. Mutually exclusive with lockfile and version-file.'
     required: false
+  github-token:
+    description: "GitHub token for resolving major/minor version pins without the unauthenticated API rate limit."
+    required: false
+    default: ${{ github.token }}
   lockfile:
     description: "Path to a lock file used to resolve the Tombi version (uv.lock, poetry.lock, pnpm-lock.yaml, package-lock.json, yarn.lock, bun.lock, mise.lock). Mutually exclusive with version and version-file."
     required: false
